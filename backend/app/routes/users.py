@@ -1,60 +1,95 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from ..models import db, User
+from werkzeug.security import generate_password_hash, check_password_hash
+from app.models import User
+from app import db
+from app.routes.auth import validate_password
 
-users_bp = Blueprint('users', __name__)
+users = Blueprint('users', __name__, url_prefix='/api/users')
 
-@users_bp.route('/profile', methods=['GET'])
+@users.route('/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
-    user_id = get_jwt_identity()
-    user = User.query.get_or_404(user_id)
+    current_user_id = int(get_jwt_identity())
+    user = User.query.get(current_user_id)
+    
+    if not user:
+        return jsonify({'error': 'Użytkownik nie został znaleziony'}), 404
     
     return jsonify({
-        'id': user.id,
         'email': user.email,
         'first_name': user.first_name,
-        'last_name': user.last_name,
-        'role': user.role
+        'last_name': user.last_name
     })
 
-@users_bp.route('/profile', methods=['PUT'])
+@users.route('/profile', methods=['PUT'])
 @jwt_required()
 def update_profile():
-    user_id = get_jwt_identity()
-    user = User.query.get_or_404(user_id)
+    current_user_id = get_jwt_identity()
+    user = User.query.get(current_user_id)
+    
+    if not user:
+        return jsonify({'error': 'Użytkownik nie został znaleziony'}), 404
+    
     data = request.get_json()
     
+    # Sprawdź czy email nie jest już zajęty przez innego użytkownika
     if 'email' in data and data['email'] != user.email:
-        if User.query.filter_by(email=data['email']).first():
-            return jsonify({'error': 'Email already registered'}), 400
+        existing_user = User.query.filter_by(email=data['email']).first()
+        if existing_user:
+            return jsonify({'error': 'Email jest już zajęty'}), 400
     
-    allowed_fields = ['first_name', 'last_name', 'email']
-    for field in allowed_fields:
-        if field in data:
-            setattr(user, field, data[field])
+    # Aktualizuj dane użytkownika
+    if 'email' in data:
+        user.email = data['email']
+    if 'first_name' in data:
+        user.first_name = data['first_name']
+    if 'last_name' in data:
+        user.last_name = data['last_name']
     
-    db.session.commit()
-    
-    return jsonify({
-        'id': user.id,
-        'email': user.email,
-        'first_name': user.first_name,
-        'last_name': user.last_name,
-        'role': user.role
-    })
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': 'Profil został zaktualizowany',
+            'user': {
+                'email': user.email,
+                'first_name': user.first_name,
+                'last_name': user.last_name
+            }
+        })
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Nie udało się zaktualizować profilu'}), 500
 
-@users_bp.route('/profile/password', methods=['PUT'])
+@users.route('/profile/password', methods=['PUT'])
 @jwt_required()
 def change_password():
-    user_id = get_jwt_identity()
-    user = User.query.get_or_404(user_id)
+    current_user_id = int(get_jwt_identity())
+    user = User.query.get(current_user_id)
+    
+    if not user:
+        return jsonify({'error': 'Użytkownik nie został znaleziony'}), 404
+    
     data = request.get_json()
     
-    if not user.check_password(data['current_password']):
-        return jsonify({'error': 'Current password is incorrect'}), 400
+    if not all(k in data for k in ('current_password', 'new_password')):
+        return jsonify({'error': 'Brakujące dane'}), 400
     
-    user.set_password(data['new_password'])
-    db.session.commit()
+    # Sprawdź obecne hasło
+    if not check_password_hash(user.password_hash, data['current_password']):
+        return jsonify({'error': 'Nieprawidłowe obecne hasło'}), 400
     
-    return jsonify({'message': 'Password updated successfully'}) 
+    # Walidacja nowego hasła
+    is_valid, error_message = validate_password(data['new_password'])
+    if not is_valid:
+        return jsonify({'error': error_message}), 400
+    
+    # Zaktualizuj hasło
+    user.password_hash = generate_password_hash(data['new_password'])
+    
+    try:
+        db.session.commit()
+        return jsonify({'message': 'Hasło zostało zmienione'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': 'Nie udało się zmienić hasła'}), 500 

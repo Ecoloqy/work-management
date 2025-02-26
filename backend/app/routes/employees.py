@@ -1,6 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from ..models import db, Employee, User, EmployeeCost
+from datetime import datetime, date
+from sqlalchemy import func
+from .. import db
+from ..models import Employee, User, EmployeeCost, WorkplaceAssignment, WorkplaceRevenue
 
 employees_bp = Blueprint('employees', __name__)
 
@@ -8,7 +11,32 @@ employees_bp = Blueprint('employees', __name__)
 @jwt_required()
 def get_employees():
     user_id = get_jwt_identity()
-    employees = Employee.query.filter_by(manager_id=user_id).all()
+    employees = Employee.query.filter_by(user_id=user_id).all()
+    
+    # Pobierz aktualny miesiąc i rok
+    today = date.today()
+    first_day = date(today.year, today.month, 1)
+    
+    employee_stats = {}
+    for emp in employees:
+        # Oblicz sumę kosztów
+        costs = db.session.query(func.sum(EmployeeCost.amount)).filter(
+            EmployeeCost.employee_id == emp.id,
+            func.date_trunc('month', EmployeeCost.date) == first_day
+        ).scalar() or 0
+        
+        # Oblicz sumę przychodów z miejsc pracy
+        revenues = db.session.query(func.sum(WorkplaceRevenue.amount)).join(
+            WorkplaceAssignment, WorkplaceAssignment.workplace_id == WorkplaceRevenue.workplace_id
+        ).filter(
+            WorkplaceAssignment.employee_id == emp.id,
+            func.date_trunc('month', WorkplaceRevenue.date) == first_day
+        ).scalar() or 0
+        
+        employee_stats[emp.id] = {
+            'monthly_costs': float(costs),
+            'monthly_revenues': float(revenues)
+        }
     
     return jsonify([{
         'id': emp.id,
@@ -16,8 +44,8 @@ def get_employees():
         'last_name': emp.last_name,
         'email': emp.email,
         'phone': emp.phone,
-        'position': emp.position,
-        'hourly_rate': float(emp.hourly_rate)
+        'monthly_costs': employee_stats[emp.id]['monthly_costs'],
+        'monthly_revenues': employee_stats[emp.id]['monthly_revenues']
     } for emp in employees])
 
 @employees_bp.route('', methods=['POST'])
@@ -34,9 +62,7 @@ def create_employee():
         last_name=data['last_name'],
         email=data['email'],
         phone=data.get('phone'),
-        position=data.get('position'),
-        hourly_rate=data['hourly_rate'],
-        manager_id=user_id
+        user_id=user_id
     )
     
     db.session.add(employee)
@@ -47,32 +73,28 @@ def create_employee():
         'first_name': employee.first_name,
         'last_name': employee.last_name,
         'email': employee.email,
-        'phone': employee.phone,
-        'position': employee.position,
-        'hourly_rate': float(employee.hourly_rate)
+        'phone': employee.phone
     }), 201
 
 @employees_bp.route('/<int:id>', methods=['GET'])
 @jwt_required()
 def get_employee(id):
     user_id = get_jwt_identity()
-    employee = Employee.query.filter_by(id=id, manager_id=user_id).first_or_404()
+    employee = Employee.query.filter_by(id=id, user_id=user_id).first_or_404()
     
     return jsonify({
         'id': employee.id,
         'first_name': employee.first_name,
         'last_name': employee.last_name,
         'email': employee.email,
-        'phone': employee.phone,
-        'position': employee.position,
-        'hourly_rate': float(employee.hourly_rate)
+        'phone': employee.phone
     })
 
 @employees_bp.route('/<int:id>', methods=['PUT'])
 @jwt_required()
 def update_employee(id):
     user_id = get_jwt_identity()
-    employee = Employee.query.filter_by(id=id, manager_id=user_id).first_or_404()
+    employee = Employee.query.filter_by(id=id, user_id=user_id).first_or_404()
     data = request.get_json()
     
     if 'email' in data and data['email'] != employee.email:
@@ -89,16 +111,14 @@ def update_employee(id):
         'first_name': employee.first_name,
         'last_name': employee.last_name,
         'email': employee.email,
-        'phone': employee.phone,
-        'position': employee.position,
-        'hourly_rate': float(employee.hourly_rate)
+        'phone': employee.phone
     })
 
 @employees_bp.route('/<int:id>', methods=['DELETE'])
 @jwt_required()
 def delete_employee(id):
     user_id = get_jwt_identity()
-    employee = Employee.query.filter_by(id=id, manager_id=user_id).first_or_404()
+    employee = Employee.query.filter_by(id=id, user_id=user_id).first_or_404()
     
     db.session.delete(employee)
     db.session.commit()
@@ -109,7 +129,7 @@ def delete_employee(id):
 @jwt_required()
 def get_employee_costs(id):
     user_id = get_jwt_identity()
-    employee = Employee.query.filter_by(id=id, manager_id=user_id).first_or_404()
+    employee = Employee.query.filter_by(id=id, user_id=user_id).first_or_404()
     
     costs = EmployeeCost.query.filter_by(employee_id=id).all()
     return jsonify([{
@@ -123,7 +143,7 @@ def get_employee_costs(id):
 @jwt_required()
 def add_employee_cost(id):
     user_id = get_jwt_identity()
-    employee = Employee.query.filter_by(id=id, manager_id=user_id).first_or_404()
+    employee = Employee.query.filter_by(id=id, user_id=user_id).first_or_404()
     data = request.get_json()
     
     cost = EmployeeCost(

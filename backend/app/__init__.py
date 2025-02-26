@@ -41,9 +41,10 @@ def create_app(config_name='development'):
             db.create_all()
         
         # Register blueprints
-        from app.routes import auth_bp, employee_bp, workplace_bp
+        from app.routes import auth_bp, employee_bp, workplace_bp, users
         app.register_blueprint(auth_bp, url_prefix='/api/auth')
         app.register_blueprint(employee_bp, url_prefix='/api/employees')
         app.register_blueprint(workplace_bp, url_prefix='/api/workplaces')
+        app.register_blueprint(users)
     
     return app 

@@ -1,12 +1,22 @@
 import React from 'react';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
-import { Box, Button, TextField, Typography, Container, Alert } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
+import { Box, Button, TextField, Typography, Container, Alert, Link } from '@mui/material';
 import { useAuth } from '../../hooks/useAuth';
 
 const validationSchema = yup.object({
   email: yup.string().email('Wprowadź poprawny email').required('Email jest wymagany'),
-  password: yup.string().min(6, 'Minimum 6 znaków').required('Hasło jest wymagane'),
+  password: yup.string()
+    .required('Hasło jest wymagane')
+    .min(8, 'Hasło musi mieć co najmniej 8 znaków')
+    .matches(/[a-z]/, 'Hasło musi zawierać przynajmniej jedną małą literę')
+    .matches(/[A-Z]/, 'Hasło musi zawierać przynajmniej jedną wielką literę')
+    .matches(/\d/, 'Hasło musi zawierać przynajmniej jedną cyfrę')
+    .matches(/[!@#$%^&*(),.?":{}|<>]/, 'Hasło musi zawierać przynajmniej jeden znak specjalny'),
+  confirmPassword: yup.string()
+    .required('Potwierdzenie hasła jest wymagane')
+    .oneOf([yup.ref('password')], 'Hasła muszą być identyczne'),
   firstName: yup.string().required('Imię jest wymagane'),
   lastName: yup.string().required('Nazwisko jest wymagane'),
 });
@@ -18,6 +28,7 @@ export const RegisterForm: React.FC = () => {
     initialValues: {
       email: '',
       password: '',
+      confirmPassword: '',
       firstName: '',
       lastName: '',
     },
@@ -25,8 +36,8 @@ export const RegisterForm: React.FC = () => {
     onSubmit: async (values, { setSubmitting, setStatus }) => {
       try {
         await register(values.email, values.password, values.firstName, values.lastName);
-      } catch (error) {
-        setStatus('Błąd rejestracji. Spróbuj ponownie.');
+      } catch (error: any) {
+        setStatus(error.response?.data?.error || 'Błąd rejestracji. Spróbuj ponownie.');
       } finally {
         setSubmitting(false);
       }
@@ -50,6 +61,10 @@ export const RegisterForm: React.FC = () => {
             onChange={formik.handleChange}
             error={formik.touched.firstName && Boolean(formik.errors.firstName)}
             helperText={formik.touched.firstName && formik.errors.firstName}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            autoComplete="given-name"
           />
           
           <TextField
@@ -61,6 +76,10 @@ export const RegisterForm: React.FC = () => {
             onChange={formik.handleChange}
             error={formik.touched.lastName && Boolean(formik.errors.lastName)}
             helperText={formik.touched.lastName && formik.errors.lastName}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            autoComplete="family-name"
           />
           
           <TextField
@@ -73,6 +92,15 @@ export const RegisterForm: React.FC = () => {
             onChange={formik.handleChange}
             error={formik.touched.email && Boolean(formik.errors.email)}
             helperText={formik.touched.email && formik.errors.email}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            autoComplete="email"
+            onAnimationStart={(e) => {
+              if (e.animationName === 'mui-auto-fill') {
+                formik.setFieldTouched('email', true, false);
+              }
+            }}
           />
           
           <TextField
@@ -85,6 +113,31 @@ export const RegisterForm: React.FC = () => {
             onChange={formik.handleChange}
             error={formik.touched.password && Boolean(formik.errors.password)}
             helperText={formik.touched.password && formik.errors.password}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            autoComplete="new-password"
+            onAnimationStart={(e) => {
+              if (e.animationName === 'mui-auto-fill') {
+                formik.setFieldTouched('password', true, false);
+              }
+            }}
+          />
+
+          <TextField
+            margin="normal"
+            fullWidth
+            label="Potwierdź hasło"
+            name="confirmPassword"
+            type="password"
+            value={formik.values.confirmPassword}
+            onChange={formik.handleChange}
+            error={formik.touched.confirmPassword && Boolean(formik.errors.confirmPassword)}
+            helperText={formik.touched.confirmPassword && formik.errors.confirmPassword}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            autoComplete="new-password"
           />
           
           <Button
@@ -96,6 +149,11 @@ export const RegisterForm: React.FC = () => {
           >
             Zarejestruj się
           </Button>
+          <Box sx={{ mt: 2, textAlign: 'center' }}>
+            <Link component={RouterLink} to="/login" variant="body2">
+              Masz już konto? Zaloguj się
+            </Link>
+          </Box>
         </Box>
       </Box>
     </Container>

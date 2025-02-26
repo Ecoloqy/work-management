@@ -1,7 +1,9 @@
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
-from ..models import db, Workplace, WorkplaceAssignment, WorkplaceCost, WorkplaceRevenue, Employee
-from datetime import datetime
+from sqlalchemy import func
+from datetime import date
+from .. import db
+from ..models import Workplace, WorkplaceAssignment, WorkplaceCost, WorkplaceRevenue, Employee
 
 workplaces_bp = Blueprint('workplaces', __name__)
 
@@ -11,11 +13,36 @@ def get_workplaces():
     user_id = get_jwt_identity()
     workplaces = Workplace.query.filter_by(owner_id=user_id).all()
     
+    # Pobierz aktualny miesiąc i rok
+    today = date.today()
+    first_day = date(today.year, today.month, 1)
+    
+    workplace_stats = {}
+    for wp in workplaces:
+        # Oblicz sumę kosztów
+        costs = db.session.query(func.sum(WorkplaceCost.amount)).filter(
+            WorkplaceCost.workplace_id == wp.id,
+            func.date_trunc('month', WorkplaceCost.date) == first_day
+        ).scalar() or 0
+        
+        # Oblicz sumę przychodów
+        revenues = db.session.query(func.sum(WorkplaceRevenue.amount)).filter(
+            WorkplaceRevenue.workplace_id == wp.id,
+            func.date_trunc('month', WorkplaceRevenue.date) == first_day
+        ).scalar() or 0
+        
+        workplace_stats[wp.id] = {
+            'monthly_costs': float(costs),
+            'monthly_revenues': float(revenues)
+        }
+    
     return jsonify([{
         'id': wp.id,
         'name': wp.name,
-        'address': wp.address,
-        'description': wp.description
+        'location': wp.location,
+        'description': wp.description,
+        'monthly_costs': workplace_stats[wp.id]['monthly_costs'],
+        'monthly_revenues': workplace_stats[wp.id]['monthly_revenues']
     } for wp in workplaces])
 
 @workplaces_bp.route('', methods=['POST'])
@@ -26,7 +53,7 @@ def create_workplace():
     
     workplace = Workplace(
         name=data['name'],
-        address=data['address'],
+        location=data.get('address'),
         description=data.get('description'),
         owner_id=user_id
     )
@@ -37,7 +64,7 @@ def create_workplace():
     return jsonify({
         'id': workplace.id,
         'name': workplace.name,
-        'address': workplace.address,
+        'location': workplace.location,
         'description': workplace.description
     }), 201
 
@@ -50,7 +77,7 @@ def get_workplace(id):
     return jsonify({
         'id': workplace.id,
         'name': workplace.name,
-        'address': workplace.address,
+        'location': workplace.location,
         'description': workplace.description
     })
 
@@ -69,7 +96,7 @@ def update_workplace(id):
     return jsonify({
         'id': workplace.id,
         'name': workplace.name,
-        'address': workplace.address,
+        'location': workplace.location,
         'description': workplace.description
     })
 

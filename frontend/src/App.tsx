@@ -9,6 +9,9 @@ import { Dashboard } from './components/dashboard/Dashboard';
 import { Layout } from './components/layout/Layout';
 import { PrivateRoute } from './components/auth/PrivateRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
+import { EmployeeList } from './components/employees/EmployeeList';
+import { WorkplaceList } from './components/workplaces/WorkplaceList';
+import { Profile } from './components/profile/Profile';
 
 const App: React.FC = () => {
   return (
@@ -40,6 +43,36 @@ const App: React.FC = () => {
                 <PrivateRoute>
                   <Layout>
                     <Dashboard />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/employees*"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <EmployeeList />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/workplaces*"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <WorkplaceList />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/profile*"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <Profile />
                   </Layout>
                 </PrivateRoute>
               }

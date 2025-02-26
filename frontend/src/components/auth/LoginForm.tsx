@@ -7,8 +7,10 @@ import {
   TextField,
   Typography,
   Container,
-  Alert
+  Alert,
+  Link
 } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 
 const validationSchema = yup.object({
@@ -18,7 +20,6 @@ const validationSchema = yup.object({
     .required('Email jest wymagany'),
   password: yup
     .string()
-    .min(6, 'Hasło musi mieć co najmniej 6 znaków')
     .required('Hasło jest wymagane'),
 });
 
@@ -34,8 +35,8 @@ export const LoginForm: React.FC = () => {
     onSubmit: async (values, { setSubmitting, setStatus }) => {
       try {
         await login(values.email, values.password);
-      } catch (error) {
-        setStatus('Nieprawidłowy email lub hasło');
+      } catch (error: any) {
+        setStatus(error.response?.data?.error || 'Nieprawidłowy email lub hasło');
       } finally {
         setSubmitting(false);
       }
@@ -56,7 +57,7 @@ export const LoginForm: React.FC = () => {
           Logowanie
         </Typography>
         
-        <Box component="form" onSubmit={formik.handleSubmit} sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={formik.handleSubmit} sx={{ mt: 1, width: '100%' }}>
           {formik.status && (
             <Alert severity="error" sx={{ mb: 2 }}>
               {formik.status}
@@ -76,6 +77,14 @@ export const LoginForm: React.FC = () => {
             onChange={formik.handleChange}
             error={formik.touched.email && Boolean(formik.errors.email)}
             helperText={formik.touched.email && formik.errors.email}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            onAnimationStart={(e) => {
+              if (e.animationName === 'mui-auto-fill') {
+                formik.setFieldTouched('email', true, false);
+              }
+            }}
           />
           
           <TextField
@@ -91,6 +100,14 @@ export const LoginForm: React.FC = () => {
             onChange={formik.handleChange}
             error={formik.touched.password && Boolean(formik.errors.password)}
             helperText={formik.touched.password && formik.errors.password}
+            InputLabelProps={{
+              shrink: true,
+            }}
+            onAnimationStart={(e) => {
+              if (e.animationName === 'mui-auto-fill') {
+                formik.setFieldTouched('password', true, false);
+              }
+            }}
           />
           
           <Button
@@ -102,6 +119,12 @@ export const LoginForm: React.FC = () => {
           >
             Zaloguj się
           </Button>
+
+          <Box sx={{ mt: 2, textAlign: 'center' }}>
+            <Link component={RouterLink} to="/register" variant="body2">
+              Nie masz konta? Zarejestruj się
+            </Link>
+          </Box>
         </Box>
       </Box>
     </Container>

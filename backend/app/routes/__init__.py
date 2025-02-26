@@ -3,5 +3,6 @@
 from .auth import auth_bp
 from .employees import employees_bp as employee_bp
 from .workplaces import workplaces_bp as workplace_bp
+from .users import users
 
-__all__ = ['auth_bp', 'employee_bp', 'workplace_bp'] 
+__all__ = ['auth_bp', 'employee_bp', 'workplace_bp', 'users'] 
