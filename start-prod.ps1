@@ -58,4 +58,4 @@ try {
 }
 
 Write-Host "`nAplikacja produkcyjna została uruchomiona!" -ForegroundColor Green
-Write-Host "Aby zobaczyć logi, użyj: docker-compose logs -f" -ForegroundColor Yellow 
+Write-Host "Aby zobaczyć logi, użyj: docker-compose logs -f" -ForegroundColor Yellow

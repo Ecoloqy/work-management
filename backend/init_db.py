@@ -10,11 +10,11 @@ def init_db():
     # Upewnij się, że mamy wszystkie potrzebne zmienne środowiskowe
     required_vars = ['FLASK_APP', 'FLASK_ENV']
     for var in required_vars:
-        if not os.getenv(var):
+        if not os.environ.get(var):
             raise ValueError(f'Brak wymaganej zmiennej środowiskowej: {var}')
-    
+
     # Utwórz aplikację w odpowiednim trybie
-    app = create_app(os.getenv('FLASK_ENV', 'development'))
+    app = create_app()
     
     with app.app_context():
         # Upewnij się, że wszystkie tabele istnieją
@@ -40,4 +40,4 @@ def init_db():
             print('Użytkownik administrator już istnieje')
 
 if __name__ == '__main__':
-    init_db() 
+    init_db()

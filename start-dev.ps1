@@ -111,4 +111,4 @@ try {
 
 Write-Host "`nŚrodowisko deweloperskie zostało uruchomione!" -ForegroundColor Green
 Write-Host "Backend dostępny na: http://localhost:5000" -ForegroundColor Yellow
-Write-Host "Frontend dostępny na: http://localhost:3000" -ForegroundColor Yellow 
+Write-Host "Frontend dostępny na: http://localhost:3000" -ForegroundColor Yellow

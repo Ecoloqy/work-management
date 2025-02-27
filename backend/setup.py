@@ -13,4 +13,4 @@ setup(
         'psycopg2-binary',
         'python-dotenv',
     ],
-) 
+)

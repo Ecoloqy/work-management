@@ -15,7 +15,14 @@ db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
 
-def create_app(config_class=Config):
+def create_app(config_class=None):
+    if config_class is None:
+        env = os.getenv("FLASK_ENV", "development")
+        if env == "development":
+            from config import DevelopmentConfig as config_class
+        else:
+            from config import ProductionConfig as config_class
+
     app = Flask(__name__)
     
     # Load config based on environment
@@ -25,9 +32,11 @@ def create_app(config_class=Config):
     db.init_app(app)
     migrate.init_app(app, db)
     jwt.init_app(app)
+
+    development_mode = config_class.DEVELOPMENT == True
     
     # Configure CORS based on environment
-    if config_class.PRODUCTION:
+    if not development_mode:
         CORS(app, resources={r"/api/*": {"origins": "*"}})
     else:
         CORS(app)
@@ -37,7 +46,7 @@ def create_app(config_class=Config):
         from . import models
         
         # Create tables if they don't exist (useful for development)
-        if config_class.DEVELOPMENT:
+        if development_mode:
             db.create_all()
         
         # Register blueprints
@@ -59,4 +68,4 @@ def create_app(config_class=Config):
         app.register_blueprint(schedules_bp, url_prefix='/api/schedules')
         app.register_blueprint(reports_bp, url_prefix='/api/reports')
     
-    return app 
+    return app
