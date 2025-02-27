@@ -23,6 +23,10 @@ import {
   Person as PersonIcon,
   ExitToApp as LogoutIcon,
   Dashboard as DashboardIcon,
+  MoneyOff as MoneyOffIcon,
+  MonetizationOn as MonetizationOnIcon,
+  CalendarMonth as CalendarIcon,
+  Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 import { useAuth } from '../../hooks/useAuth';
 
@@ -44,6 +48,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { text: 'Panel główny', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Pracownicy', icon: <PeopleIcon />, path: '/dashboard/employees' },
     { text: 'Miejsca pracy', icon: <BusinessIcon />, path: '/dashboard/workplaces' },
+    { text: 'Koszty', icon: <MoneyOffIcon />, path: '/dashboard/costs' },
+    { text: 'Przychody', icon: <MonetizationOnIcon />, path: '/dashboard/revenues' },
+    { text: 'Grafik', icon: <CalendarIcon />, path: '/dashboard/schedules' },
+    { text: 'Raporty', icon: <AssessmentIcon />, path: '/dashboard/reports' },
     { text: 'Profil', icon: <PersonIcon />, path: '/dashboard/profile' },
   ];
 

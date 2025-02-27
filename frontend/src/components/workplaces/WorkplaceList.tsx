@@ -35,7 +35,7 @@ import { useFormik } from 'formik';
 import * as yup from 'yup';
 
 interface Workplace {
-  id: number;
+  id: string;
   name: string;
   location: string;
   description: string;
@@ -81,7 +81,7 @@ export const WorkplaceList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm('Czy na pewno chcesz usunąć to miejsce pracy?')) {
       return;
     }
@@ -226,8 +226,8 @@ export const WorkplaceList: React.FC = () => {
             <TableCell>Nazwa</TableCell>
             <TableCell>Lokalizacja</TableCell>
             <TableCell>Opis</TableCell>
-            <TableCell align="right">Koszty (PLN)</TableCell>
-            <TableCell align="right">Przychody (PLN)</TableCell>
+            <TableCell align="right">Koszty</TableCell>
+            <TableCell align="right">Przychody</TableCell>
             <TableCell align="right">Akcje</TableCell>
           </TableRow>
         </TableHead>
@@ -288,13 +288,13 @@ export const WorkplaceList: React.FC = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Lista miejsc pracy</Typography>
+        <Typography variant="h4">Miejsca pracy</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setIsModalOpen(true)}
         >
-          Dodaj miejsce pracy
+          Dodaj
         </Button>
       </Box>
 

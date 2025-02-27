@@ -13,6 +13,10 @@ class Config:
     # API
     API_TITLE = 'Work Management API'
     API_VERSION = 'v1'
+    
+    # Environment
+    PRODUCTION = False
+    DEVELOPMENT = True
 
 class DevelopmentConfig(Config):
     DEBUG = True

@@ -1,11 +1,12 @@
 from datetime import datetime
 from app import db
+import uuid
 
 class Employee(db.Model):
     __tablename__ = 'employees'
 
-    id = db.Column(db.Integer, primary_key=True)
-    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    id = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('users.id'), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
@@ -29,8 +30,8 @@ class Employee(db.Model):
 class EmployeeCost(db.Model):
     __tablename__ = 'employee_costs'
 
-    id = db.Column(db.Integer, primary_key=True)
-    employee_id = db.Column(db.Integer, db.ForeignKey('employees.id'), nullable=False)
+    id = db.Column(db.UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    employee_id = db.Column(db.UUID(as_uuid=True), db.ForeignKey('employees.id'), nullable=False)
     description = db.Column(db.String(200))
     amount = db.Column(db.Float, nullable=False)
     date = db.Column(db.DateTime, nullable=False)

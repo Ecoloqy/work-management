@@ -1,6 +1,7 @@
 from .user import User
 from .employee import Employee, EmployeeCost
 from .workplace import Workplace, WorkplaceAssignment, WorkplaceCost, WorkplaceRevenue
+from .schedule import Schedule
 
 __all__ = [
     'User',
@@ -9,5 +10,6 @@ __all__ = [
     'Workplace',
     'WorkplaceAssignment',
     'WorkplaceCost',
-    'WorkplaceRevenue'
+    'WorkplaceRevenue',
+    'Schedule'
 ] 

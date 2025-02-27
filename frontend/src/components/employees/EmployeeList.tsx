@@ -36,7 +36,7 @@ import { useFormik } from 'formik';
 import * as yup from 'yup';
 
 interface EmployeeResponse {
-  id: number;
+  id: string;
   first_name: string;
   last_name: string;
   email: string;
@@ -46,7 +46,7 @@ interface EmployeeResponse {
 }
 
 interface Employee {
-  id: number;
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -104,7 +104,7 @@ export const EmployeeList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: number) => {
+  const handleDelete = async (id: string) => {
     if (!window.confirm('Czy na pewno chcesz usunąć tego pracownika?')) {
       return;
     }
@@ -255,8 +255,8 @@ export const EmployeeList: React.FC = () => {
             <TableCell>Imię i nazwisko</TableCell>
             <TableCell>Email</TableCell>
             <TableCell>Telefon</TableCell>
-            <TableCell align="right">Koszty (PLN)</TableCell>
-            <TableCell align="right">Przychody (PLN)</TableCell>
+            <TableCell align="right">Koszty</TableCell>
+            <TableCell align="right">Przychody</TableCell>
             <TableCell align="right">Akcje</TableCell>
           </TableRow>
         </TableHead>
@@ -307,13 +307,13 @@ export const EmployeeList: React.FC = () => {
   return (
     <Box>
       <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
-        <Typography variant="h4">Lista pracowników</Typography>
+        <Typography variant="h4">Pracownicy</Typography>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           onClick={() => setIsModalOpen(true)}
         >
-          Dodaj pracownika
+          Dodaj
         </Button>
       </Box>
 

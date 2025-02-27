@@ -53,7 +53,7 @@ def create_workplace():
     
     workplace = Workplace(
         name=data['name'],
-        location=data.get('address'),
+        location=data.get('location'),
         description=data.get('description'),
         owner_id=user_id
     )
@@ -68,7 +68,7 @@ def create_workplace():
         'description': workplace.description
     }), 201
 
-@workplaces_bp.route('/<int:id>', methods=['GET'])
+@workplaces_bp.route('/<uuid:id>', methods=['GET'])
 @jwt_required()
 def get_workplace(id):
     user_id = get_jwt_identity()
@@ -81,7 +81,7 @@ def get_workplace(id):
         'description': workplace.description
     })
 
-@workplaces_bp.route('/<int:id>', methods=['PUT'])
+@workplaces_bp.route('/<uuid:id>', methods=['PUT'])
 @jwt_required()
 def update_workplace(id):
     user_id = get_jwt_identity()
@@ -100,7 +100,7 @@ def update_workplace(id):
         'description': workplace.description
     })
 
-@workplaces_bp.route('/<int:id>', methods=['DELETE'])
+@workplaces_bp.route('/<uuid:id>', methods=['DELETE'])
 @jwt_required()
 def delete_workplace(id):
     user_id = get_jwt_identity()
@@ -111,7 +111,7 @@ def delete_workplace(id):
     
     return '', 204
 
-@workplaces_bp.route('/<int:id>/employees', methods=['GET'])
+@workplaces_bp.route('/<uuid:id>/employees', methods=['GET'])
 @jwt_required()
 def get_workplace_employees(id):
     user_id = get_jwt_identity()
@@ -127,7 +127,7 @@ def get_workplace_employees(id):
         'end_date': assignment.end_date.isoformat() if assignment.end_date else None
     } for assignment in assignments])
 
-@workplaces_bp.route('/<int:id>/employees', methods=['POST'])
+@workplaces_bp.route('/<uuid:id>/employees', methods=['POST'])
 @jwt_required()
 def assign_employee(id):
     user_id = get_jwt_identity()
@@ -153,7 +153,7 @@ def assign_employee(id):
         'end_date': assignment.end_date.isoformat() if assignment.end_date else None
     }), 201
 
-@workplaces_bp.route('/<int:id>/costs', methods=['GET'])
+@workplaces_bp.route('/<uuid:id>/costs', methods=['GET'])
 @jwt_required()
 def get_workplace_costs(id):
     user_id = get_jwt_identity()
@@ -167,7 +167,7 @@ def get_workplace_costs(id):
         'date': cost.date.isoformat()
     } for cost in costs])
 
-@workplaces_bp.route('/<int:id>/costs', methods=['POST'])
+@workplaces_bp.route('/<uuid:id>/costs', methods=['POST'])
 @jwt_required()
 def add_workplace_cost(id):
     user_id = get_jwt_identity()
@@ -191,7 +191,7 @@ def add_workplace_cost(id):
         'date': cost.date.isoformat()
     }), 201
 
-@workplaces_bp.route('/<int:id>/revenues', methods=['GET'])
+@workplaces_bp.route('/<uuid:id>/revenues', methods=['GET'])
 @jwt_required()
 def get_workplace_revenues(id):
     user_id = get_jwt_identity()
@@ -205,7 +205,7 @@ def get_workplace_revenues(id):
         'date': revenue.date.isoformat()
     } for revenue in revenues])
 
-@workplaces_bp.route('/<int:id>/revenues', methods=['POST'])
+@workplaces_bp.route('/<uuid:id>/revenues', methods=['POST'])
 @jwt_required()
 def add_workplace_revenue(id):
     user_id = get_jwt_identity()

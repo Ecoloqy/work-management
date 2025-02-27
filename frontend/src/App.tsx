@@ -11,7 +11,11 @@ import { PrivateRoute } from './components/auth/PrivateRoute';
 import { PublicRoute } from './components/auth/PublicRoute';
 import { EmployeeList } from './components/employees/EmployeeList';
 import { WorkplaceList } from './components/workplaces/WorkplaceList';
+import { CostList } from './components/costs/CostList';
+import { RevenueList } from './components/revenues/RevenueList';
 import { Profile } from './components/profile/Profile';
+import { ScheduleList } from './components/schedule/ScheduleList';
+import { ReportList } from './components/reports/ReportList';
 
 const App: React.FC = () => {
   return (
@@ -63,6 +67,46 @@ const App: React.FC = () => {
                 <PrivateRoute>
                   <Layout>
                     <WorkplaceList />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/costs*"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <CostList />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/revenues*"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <RevenueList />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/schedules*"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <ScheduleList />
+                  </Layout>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/dashboard/reports*"
+              element={
+                <PrivateRoute>
+                  <Layout>
+                    <ReportList />
                   </Layout>
                 </PrivateRoute>
               }

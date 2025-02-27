@@ -76,7 +76,7 @@ def create_employee():
         'phone': employee.phone
     }), 201
 
-@employees_bp.route('/<int:id>', methods=['GET'])
+@employees_bp.route('/<uuid:id>', methods=['GET'])
 @jwt_required()
 def get_employee(id):
     user_id = get_jwt_identity()
@@ -90,7 +90,7 @@ def get_employee(id):
         'phone': employee.phone
     })
 
-@employees_bp.route('/<int:id>', methods=['PUT'])
+@employees_bp.route('/<uuid:id>', methods=['PUT'])
 @jwt_required()
 def update_employee(id):
     user_id = get_jwt_identity()
@@ -114,7 +114,7 @@ def update_employee(id):
         'phone': employee.phone
     })
 
-@employees_bp.route('/<int:id>', methods=['DELETE'])
+@employees_bp.route('/<uuid:id>', methods=['DELETE'])
 @jwt_required()
 def delete_employee(id):
     user_id = get_jwt_identity()
@@ -125,7 +125,7 @@ def delete_employee(id):
     
     return '', 204
 
-@employees_bp.route('/<int:id>/costs', methods=['GET'])
+@employees_bp.route('/<uuid:id>/costs', methods=['GET'])
 @jwt_required()
 def get_employee_costs(id):
     user_id = get_jwt_identity()
@@ -139,7 +139,7 @@ def get_employee_costs(id):
         'date': cost.date.isoformat()
     } for cost in costs])
 
-@employees_bp.route('/<int:id>/costs', methods=['POST'])
+@employees_bp.route('/<uuid:id>/costs', methods=['POST'])
 @jwt_required()
 def add_employee_cost(id):
     user_id = get_jwt_identity()

@@ -5,6 +5,7 @@ from flask_jwt_extended import JWTManager
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
+from config import Config
 
 # Load environment variables from .env file
 load_dotenv()
@@ -14,12 +15,11 @@ db = SQLAlchemy()
 migrate = Migrate()
 jwt = JWTManager()
 
-def create_app(config_name='development'):
+def create_app(config_class=Config):
     app = Flask(__name__)
     
     # Load config based on environment
-    from app.config import config
-    app.config.from_object(config[config_name])
+    app.config.from_object(config_class)
     
     # Initialize extensions
     db.init_app(app)
@@ -27,7 +27,7 @@ def create_app(config_name='development'):
     jwt.init_app(app)
     
     # Configure CORS based on environment
-    if config_name == 'production':
+    if config_class.PRODUCTION:
         CORS(app, resources={r"/api/*": {"origins": "*"}})
     else:
         CORS(app)
@@ -37,14 +37,21 @@ def create_app(config_name='development'):
         from . import models
         
         # Create tables if they don't exist (useful for development)
-        if config_name == 'development':
+        if config_class.DEVELOPMENT:
             db.create_all()
         
         # Register blueprints
-        from app.routes import auth_bp, employee_bp, workplace_bp, users
+        from .routes.auth import auth_bp
+        from .routes.employees import employees_bp
+        from .routes.workplaces import workplaces_bp
+        from .routes.costs import costs_bp
+        from .routes.revenues import revenues_bp
+        from .routes.schedules import schedules_bp
         app.register_blueprint(auth_bp, url_prefix='/api/auth')
-        app.register_blueprint(employee_bp, url_prefix='/api/employees')
-        app.register_blueprint(workplace_bp, url_prefix='/api/workplaces')
-        app.register_blueprint(users)
+        app.register_blueprint(employees_bp, url_prefix='/api/employees')
+        app.register_blueprint(workplaces_bp, url_prefix='/api/workplaces')
+        app.register_blueprint(costs_bp, url_prefix='/api/costs')
+        app.register_blueprint(revenues_bp, url_prefix='/api/revenues')
+        app.register_blueprint(schedules_bp, url_prefix='/api/schedules')
     
     return app 
