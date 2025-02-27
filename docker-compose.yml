@@ -36,7 +36,7 @@ services:
       postgres:
         condition: service_healthy
     ports:
-      - "5000:5000"
+      - "8088:5000"
     volumes:
       - ./backend:/app
     command: >
@@ -62,14 +62,14 @@ services:
         python init_db.py &&
         echo 'Database initialized' &&
         echo 'Starting application...' &&
-        gunicorn --bind 0.0.0.0:5000 'app:create_app(\"production\")'"
+        gunicorn --bind 0.0.0.0:8088 'app:create_app(\"production\")'"
     networks:
       - work-management-network
 
   frontend:
     build: ./frontend
     ports:
-      - "80:80"
+      - "8008:80"
     depends_on:
       - backend
     networks:
