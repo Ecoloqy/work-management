@@ -117,6 +117,7 @@ export const CostList: React.FC = () => {
       const response = await axios.get('/api/workplaces');
       setWorkplaces(response.data);
     } catch (err) {
+      setError('Nie udało się pobrać listy miejsc pracy');
       console.error('Error fetching workplaces:', err);
     }
   };
@@ -131,18 +132,19 @@ export const CostList: React.FC = () => {
       }));
       setEmployees(mappedEmployees);
     } catch (err) {
+      setError('Nie udało się pobrać listy pracowników');
       console.error('Error fetching employees:', err);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (cost: Cost) => {
     if (!window.confirm('Czy na pewno chcesz usunąć ten koszt?')) {
       return;
     }
 
     try {
-      await axios.delete(`/api/costs/${id}`);
-      setCosts(costs.filter(cost => cost.id !== id));
+      await axios.delete(`/api/costs/${cost.type}/${cost.id}`);
+      setCosts(costs.filter(r => r.id !== cost.id));
       setError(null);
     } catch (err) {
       setError('Nie udało się usunąć kosztu');
@@ -234,7 +236,7 @@ export const CostList: React.FC = () => {
                   <IconButton onClick={() => handleEdit(cost)} size="small">
                     <EditIcon />
                   </IconButton>
-                  <IconButton onClick={() => handleDelete(cost.id)} color="error" size="small">
+                  <IconButton onClick={() => handleDelete(cost)} color="error" size="small">
                     <DeleteIcon />
                   </IconButton>
                 </Box>
@@ -275,7 +277,7 @@ export const CostList: React.FC = () => {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Koszt</TableCell>
+            <TableCell>Typ</TableCell>
             <TableCell>Opis</TableCell>
             <TableCell>Data</TableCell>
             <TableCell align="right">Kwota</TableCell>
@@ -296,7 +298,7 @@ export const CostList: React.FC = () => {
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Usuń">
-                  <IconButton onClick={() => handleDelete(cost.id)} color="error">
+                  <IconButton onClick={() => handleDelete(cost)} color="error">
                     <DeleteIcon />
                   </IconButton>
                 </Tooltip>

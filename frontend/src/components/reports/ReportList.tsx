@@ -2,17 +2,17 @@ import React, { useState } from 'react';
 import {
   Box,
   Typography,
-  Grid,
-  Card,
-  CardContent,
-  Button,
   TextField,
+  Button,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
+  Grid,
+  Card,
+  CardContent,
   useTheme,
-  useMediaQuery,
+  CircularProgress,
 } from '@mui/material';
 import {
   BarChart,
@@ -22,72 +22,209 @@ import {
   CartesianGrid,
   Tooltip,
   Legend,
-  ResponsiveContainer
+  ResponsiveContainer,
 } from 'recharts';
+import DownloadIcon from '@mui/icons-material/Download';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import axios from 'axios';
 
 interface ReportFilters {
   startDate: string;
   endDate: string;
   type: 'workplace' | 'employee' | 'all';
-  id?: string;
+}
+
+interface WorkplaceStats {
+  name: string;
+  total_costs: number;
+  total_profit: number;
+  total_revenues: number;
+}
+
+interface EmployeeStats {
+  name: string;
+  total_costs: number;
+  total_revenues: number;
+  total_profit: number;
+  total_hours: number;
 }
 
 interface ReportData {
-  revenues: number;
-  costs: number;
-  profit: number;
-  chartData: {
-    date: string;
-    revenues: number;
-    costs: number;
-    profit: number;
-  }[];
+  workplaces: WorkplaceStats[];
+  employees: EmployeeStats[];
 }
 
 export const ReportList: React.FC = () => {
   const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [filters, setFilters] = useState<ReportFilters>({
-    startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-    endDate: new Date().toISOString().split('T')[0],
-    type: 'all'
+    startDate: '',
+    endDate: '',
+    type: 'all',
   });
-  const [reportData, setReportData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(false);
+  const [data, setData] = useState<ReportData | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const handleFilterChange = (field: keyof ReportFilters, value: string) => {
-    setFilters(prev => ({
-      ...prev,
-      [field]: value
-    }));
+    setFilters(prev => ({ ...prev, [field]: value }));
   };
 
   const generateReport = async () => {
+    if (!filters.startDate || !filters.endDate) {
+      setError('Wybierz zakres dat');
+      return;
+    }
+
     setLoading(true);
     setError(null);
+
     try {
-      const response = await axios.get('/api/reports', { params: filters });
-      setReportData(response.data);
-    } catch (error) {
-      console.error('Błąd podczas generowania raportu:', error);
-      setError('Nie udało się wygenerować raportu');
+      const response = await axios.post('/api/reports/stats', {
+        start_date: filters.startDate,
+        end_date: filters.endDate,
+        type: filters.type
+      });
+      setData(response.data);
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Wystąpił błąd podczas generowania raportu');
     } finally {
       setLoading(false);
     }
   };
 
+  const downloadExcel = async () => {
+    if (!filters.startDate || !filters.endDate) {
+      setError('Wybierz zakres dat');
+      return;
+    }
+
+    try {
+      const response = await axios.post('/api/reports/excel', {
+        start_date: filters.startDate,
+        end_date: filters.endDate,
+        type: filters.type
+      }, {
+        responseType: 'blob',
+      });
+
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `raport_${filters.startDate}_${filters.endDate}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error: any) {
+      setError('Wystąpił błąd podczas pobierania pliku Excel');
+    }
+  };
+
+  const renderWorkplacesChart = () => {
+    if (!data?.workplaces?.length) return null;
+
+    return (
+      <Box sx={{ mt: 4 }}>
+        {data.workplaces.map((workplace, index) => {
+          const totalStats = {
+            name: workplace.name,
+            costs: workplace.total_costs || 0,
+            revenues: workplace.total_revenues || 0,
+            profit: workplace.total_profit || 0
+          };
+
+          return (
+            <Box key={index} sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                {workplace.name}
+              </Typography>
+              <Typography variant="subtitle2" gutterBottom>
+                Koszty: {totalStats.costs.toFixed(2)} | 
+                Przychody: {totalStats.revenues.toFixed(2)} | 
+                Zysk: {totalStats.profit.toFixed(2)}
+              </Typography>
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={[totalStats]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value: number) => `${value.toFixed(2)}`}
+                    labelFormatter={(name) => `Pracownik: ${name}`}
+                  />
+                  <Legend />
+                  <Bar dataKey="costs" name="Koszty" fill={theme.palette.error.main} />
+                  <Bar dataKey="revenues" name="Przychody" fill={theme.palette.success.main} />
+                  <Bar dataKey="profit" name="Zysk" fill={theme.palette.primary.main} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          )
+        })}
+      </Box>
+    );
+  };
+
+  const renderEmployeesChart = () => {
+    if (!data?.employees?.length) return null;
+
+    return (
+      <Box sx={{ mt: 4 }}>
+        {data.employees.map((employee, index) => {
+          const totalStats = {
+            name: employee.name,
+            costs: employee.total_costs || 0,
+            revenues: employee.total_revenues || 0,
+            profit: employee.total_profit || 0,
+            hours: employee.total_hours || 0
+          };
+
+          return (
+            <Box key={index} sx={{ mb: 4 }}>
+              <Typography variant="h6" gutterBottom>
+                {employee.name}
+              </Typography>
+              <Typography variant="subtitle2" gutterBottom>
+                Koszty: {totalStats.costs.toFixed(2)} | 
+                Przychody: {totalStats.revenues.toFixed(2)} | 
+                Zysk: {totalStats.profit.toFixed(2)}
+              </Typography>
+              {totalStats.hours && (
+                <Typography variant="subtitle2" gutterBottom color="textSecondary">
+                  Godziny pracy: {totalStats.hours}
+                </Typography>
+              )}
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart data={[totalStats]}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis />
+                  <Tooltip 
+                    formatter={(value: number) => `${value.toFixed(2)}`}
+                    labelFormatter={(name) => `Pracownik: ${name}`}
+                  />
+                  <Legend />
+                  <Bar dataKey="costs" name="Koszty" fill={theme.palette.error.main} />
+                  <Bar dataKey="revenues" name="Przychody" fill={theme.palette.success.main} />
+                  <Bar dataKey="profit" name="Zysk" fill={theme.palette.primary.main} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
+
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Raporty
-      </Typography>
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 3 }}>
+        <Typography variant="h4">Raporty</Typography>
+      </Box>
 
-      <Card sx={{ mb: 3 }}>
+      <Card>
         <CardContent>
-          <Grid container spacing={2} alignItems="flex-end">
-            <Grid item xs={12} sm={6} md={3}>
+          <Grid container spacing={2} alignItems="center">
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 label="Data początkowa"
@@ -95,9 +232,10 @@ export const ReportList: React.FC = () => {
                 value={filters.startDate}
                 onChange={(e) => handleFilterChange('startDate', e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                sx={{ mb: { xs: 2, md: 0 } }}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+            <Grid item xs={12} md={3}>
               <TextField
                 fullWidth
                 label="Data końcowa"
@@ -105,10 +243,11 @@ export const ReportList: React.FC = () => {
                 value={filters.endDate}
                 onChange={(e) => handleFilterChange('endDate', e.target.value)}
                 InputLabelProps={{ shrink: true }}
+                sx={{ mb: { xs: 2, md: 0 } }}
               />
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <FormControl fullWidth>
+            <Grid item xs={12} md={3}>
+              <FormControl fullWidth sx={{ mb: { xs: 2, md: 0 } }}>
                 <InputLabel>Typ raportu</InputLabel>
                 <Select
                   value={filters.type}
@@ -116,112 +255,61 @@ export const ReportList: React.FC = () => {
                   onChange={(e) => handleFilterChange('type', e.target.value)}
                 >
                   <MenuItem value="all">Wszystko</MenuItem>
-                  <MenuItem value="workplace">Miejsce pracy</MenuItem>
-                  <MenuItem value="employee">Pracownik</MenuItem>
+                  <MenuItem value="workplace">Miejsca pracy</MenuItem>
+                  <MenuItem value="employee">Pracownicy</MenuItem>
                 </Select>
               </FormControl>
             </Grid>
-            <Grid item xs={12} sm={6} md={3}>
-              <Button
-                fullWidth
-                variant="contained"
-                onClick={generateReport}
-                disabled={loading}
-              >
-                Generuj raport
-              </Button>
+            <Grid item xs={12} md={3}>
+              <Box sx={{ 
+                display: 'flex', 
+                gap: 1,
+                flexDirection: { xs: 'column', sm: 'row' },
+                justifyContent: { xs: 'stretch', sm: 'flex-start' }
+              }}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<AssessmentIcon />}
+                  onClick={generateReport}
+                  disabled={loading}
+                  sx={{ mb: { xs: 1, sm: 0 } }}
+                >
+                  Generuj
+                </Button>
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  startIcon={<DownloadIcon />}
+                  onClick={downloadExcel}
+                  disabled={loading}
+                >
+                  Excel
+                </Button>
+              </Box>
             </Grid>
           </Grid>
+
+          {error && (
+            <Typography color="error" sx={{ mt: 2 }}>
+              {error}
+            </Typography>
+          )}
+
+          {loading && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 4 }}>
+              <CircularProgress />
+            </Box>
+          )}
+
+          {data && !loading && (
+            <>
+              {(filters.type === 'workplace' || filters.type === 'all') && renderWorkplacesChart()}
+              {(filters.type === 'employee' || filters.type === 'all') && renderEmployeesChart()}
+            </>
+          )}
         </CardContent>
       </Card>
-
-      {error && (
-        <Typography color="error" sx={{ mb: 2 }}>
-          {error}
-        </Typography>
-      )}
-
-      {loading && (
-        <Typography>Generowanie raportu...</Typography>
-      )}
-
-      {reportData && (
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Przychody
-                </Typography>
-                <Typography variant="h4" color="success.main">
-                  {reportData.revenues.toFixed(2)} zł
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Koszty
-                </Typography>
-                <Typography variant="h4" color="error.main">
-                  {reportData.costs.toFixed(2)} zł
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12} md={4}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Zysk
-                </Typography>
-                <Typography 
-                  variant="h4" 
-                  color={reportData.profit >= 0 ? 'success.main' : 'error.main'}
-                >
-                  {reportData.profit.toFixed(2)} zł
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-
-          <Grid item xs={12}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" gutterBottom>
-                  Wykres przychodów i kosztów
-                </Typography>
-                <Box sx={{ width: '100%', height: 400 }}>
-                  <ResponsiveContainer>
-                    <BarChart
-                      data={reportData.chartData}
-                      margin={{
-                        top: 20,
-                        right: 30,
-                        left: 20,
-                        bottom: 5,
-                      }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="date" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="revenues" name="Przychody" fill="#4caf50" />
-                      <Bar dataKey="costs" name="Koszty" fill="#f44336" />
-                      <Bar dataKey="profit" name="Zysk" fill="#2196f3" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </Box>
-              </CardContent>
-            </Card>
-          </Grid>
-        </Grid>
-      )}
     </Box>
   );
 }; 

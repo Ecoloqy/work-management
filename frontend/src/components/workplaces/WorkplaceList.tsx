@@ -29,10 +29,31 @@ import {
   Delete as DeleteIcon,
   LocationOn as LocationIcon,
   AccountBalance as AccountBalanceIcon,
+  MonetizationOn as MonetizationOnIcon,
+  LocalActivity as LocalActivityIcon,
+  MoneyOff as MoneyOffIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useFormik } from 'formik';
 import * as yup from 'yup';
+
+interface WorkplaceRevenue {
+  id: string;
+  employee_id: string;
+  description: string;
+  amount: number;
+  date: string;
+  created_at: string;
+}
+
+interface WorkplaceCost {
+  id: string;
+  employee_id: string;
+  description: string;
+  amount: number;
+  date: string;
+  created_at: string;
+}
 
 interface Workplace {
   id: string;
@@ -41,6 +62,8 @@ interface Workplace {
   description: string;
   monthly_costs: number;
   monthly_revenues: number;
+  revenues?: WorkplaceRevenue[];
+  costs?: WorkplaceCost[];
 }
 
 interface WorkplaceFormData {
@@ -63,6 +86,9 @@ export const WorkplaceList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingWorkplace, setEditingWorkplace] = useState<Workplace | null>(null);
+  const [selectedWorkplace, setSelectedWorkplace] = useState<Workplace | null>(null);
+  const [showRevenuesDialog, setShowRevenuesDialog] = useState(false);
+  const [showCostsDialog, setShowCostsDialog] = useState(false);
 
   useEffect(() => {
     fetchWorkplaces();
@@ -78,6 +104,26 @@ export const WorkplaceList: React.FC = () => {
       console.error('Error fetching workplaces:', err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchWorkplaceRevenues = async (id: string) => {
+    try {
+      const response = await axios.get(`/api/workplaces/${id}/revenues`);
+      return response.data;
+    } catch (error) {
+      console.error('Błąd podczas pobierania przychodów z miejsca pracy:', error);
+      return [];
+    }
+  };
+
+  const fetchWorkplaceCosts = async (id: string) => {
+    try {
+      const response = await axios.get(`/api/workplaces/${id}/costs`);
+      return response.data;
+    } catch (error) {
+      console.error('Błąd podczas pobierania kosztów z miejsca pracy:', error);
+      return [];
     }
   };
 
@@ -157,6 +203,18 @@ export const WorkplaceList: React.FC = () => {
     formik.resetForm();
   };
 
+  const handleShowRevenues = async (workplace: Workplace) => {
+    const revenues = await fetchWorkplaceRevenues(workplace.id);
+    setSelectedWorkplace({ ...workplace, revenues });
+    setShowRevenuesDialog(true);
+  };
+
+  const handleShowCosts = async (workplace: Workplace) => {
+    const costs = await fetchWorkplaceCosts(workplace.id);
+    setSelectedWorkplace({ ...workplace, costs });
+    setShowCostsDialog(true);
+  };
+
   const renderMobileView = () => (
     <Grid container spacing={2}>
       {workplaces.map((workplace) => (
@@ -174,25 +232,27 @@ export const WorkplaceList: React.FC = () => {
                   <IconButton onClick={() => handleDelete(workplace.id)} color="error" size="small">
                     <DeleteIcon />
                   </IconButton>
+                  <IconButton onClick={() => handleShowCosts(workplace)} color="error" size="small">
+                    <MoneyOffIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleShowRevenues(workplace)} color="primary" size="small">
+                    <MonetizationOnIcon />
+                  </IconButton>
                 </Box>
               </Box>
-              
+
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <LocationIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
                 <Typography variant="body2">{workplace.location}</Typography>
               </Box>
 
               {workplace.description && (
-                <Box sx={{ mt: 2, mb: 1 }}>
-                  <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 'medium', mb: 0.5 }}>
-                    Opis:
-                  </Typography>
-                  <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap' }}>
-                    {workplace.description}
-                  </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <LocalActivityIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                  <Typography variant="body2">{workplace.description}</Typography>
                 </Box>
               )}
-              
+
               <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
                 <AccountBalanceIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
                 <Box>
@@ -249,8 +309,8 @@ export const WorkplaceList: React.FC = () => {
                   {workplace.description || '-'}
                 </Typography>
               </TableCell>
-              <TableCell align="right">{workplace.monthly_costs.toFixed(2)}</TableCell>
-              <TableCell align="right">{workplace.monthly_revenues.toFixed(2)}</TableCell>
+              <TableCell align="right" sx={{ color: 'error.main' }}>{workplace.monthly_costs.toFixed(2)}</TableCell>
+              <TableCell align="right" sx={{ color: 'primary.main' }}>{workplace.monthly_revenues.toFixed(2)}</TableCell>
               <TableCell align="right">
                 <Tooltip title="Edytuj">
                   <IconButton onClick={() => handleEdit(workplace)}>
@@ -260,6 +320,16 @@ export const WorkplaceList: React.FC = () => {
                 <Tooltip title="Usuń">
                   <IconButton onClick={() => handleDelete(workplace.id)} color="error">
                     <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Pokaż koszty">
+                  <IconButton onClick={() => handleShowCosts(workplace)} color="error">
+                    <MoneyOffIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Pokaż przychody">
+                  <IconButton onClick={() => handleShowRevenues(workplace)} color="primary">
+                    <MonetizationOnIcon />
                   </IconButton>
                 </Tooltip>
               </TableCell>
@@ -346,6 +416,92 @@ export const WorkplaceList: React.FC = () => {
             </Button>
           </DialogActions>
         </form>
+      </Dialog>
+
+      <Dialog
+        open={showRevenuesDialog}
+        onClose={() => setShowRevenuesDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Przychody z miejsca pracy: {selectedWorkplace?.name}
+        </DialogTitle>
+        <DialogContent>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Data</TableCell>
+                  <TableCell>Opis</TableCell>
+                  <TableCell align="right">Kwota</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedWorkplace?.revenues?.map((revenue) => (
+                  <TableRow key={revenue.id}>
+                    <TableCell>{new Date(revenue.date).toLocaleDateString('pl-PL')}</TableCell>
+                    <TableCell>{revenue.description}</TableCell>
+                    <TableCell align="right">{revenue.amount.toFixed(2)} zł</TableCell>
+                  </TableRow>
+                ))}
+                {(!selectedWorkplace?.revenues || selectedWorkplace.revenues.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={3} align="center">
+                      Brak przychodów
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowRevenuesDialog(false)}>Zamknij</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showCostsDialog}
+        onClose={() => setShowCostsDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Koszty z miejsca pracy: {selectedWorkplace?.name}
+        </DialogTitle>
+        <DialogContent>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Data</TableCell>
+                  <TableCell>Opis</TableCell>
+                  <TableCell align="right">Kwota</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedWorkplace?.costs?.map((cost) => (
+                  <TableRow key={cost.id}>
+                    <TableCell>{new Date(cost.date).toLocaleDateString('pl-PL')}</TableCell>
+                    <TableCell>{cost.description}</TableCell>
+                    <TableCell align="right">{cost.amount.toFixed(2)} zł</TableCell>
+                  </TableRow>
+                ))}
+                {(!selectedWorkplace?.costs || selectedWorkplace.costs.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={3} align="center">
+                      Brak kosztów
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCostsDialog(false)}>Zamknij</Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

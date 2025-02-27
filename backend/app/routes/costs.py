@@ -10,26 +10,22 @@ costs_bp = Blueprint('costs', __name__)
 @costs_bp.route('', methods=['GET'])
 @jwt_required()
 def get_costs():
-    user_id = get_jwt_identity()
+    manager_id = get_jwt_identity()
     
-    # Pobierz koszty miejsc pracy użytkownika
     workplace_costs = db.session.query(WorkplaceCost).join(
         Workplace, WorkplaceCost.workplace_id == Workplace.id
     ).filter(
-        Workplace.owner_id == user_id
+        Workplace.manager_id == manager_id
     ).all()
     
-    # Pobierz koszty pracowników użytkownika
     employee_costs = db.session.query(EmployeeCost).join(
         Employee, EmployeeCost.employee_id == Employee.id
     ).filter(
-        Employee.user_id == user_id
+        Employee.manager_id == manager_id
     ).all()
     
-    # Przygotuj dane do odpowiedzi
     costs = []
     
-    # Dodaj koszty miejsc pracy
     for cost in workplace_costs:
         costs.append({
             'id': cost.id,
@@ -42,7 +38,6 @@ def get_costs():
             'created_at': cost.created_at.isoformat()
         })
     
-    # Dodaj koszty pracowników
     for cost in employee_costs:
         costs.append({
             'id': cost.id,
@@ -55,7 +50,6 @@ def get_costs():
             'created_at': cost.created_at.isoformat()
         })
     
-    # Sortuj koszty po dacie (najnowsze pierwsze)
     costs.sort(key=lambda x: x['date'], reverse=True)
     
     return jsonify(costs)
@@ -63,7 +57,7 @@ def get_costs():
 @costs_bp.route('', methods=['POST'])
 @jwt_required()
 def create_cost():
-    user_id = get_jwt_identity()
+    manager_id = get_jwt_identity()
     data = request.get_json()
     
     cost_type = data.get('type')
@@ -72,10 +66,9 @@ def create_cost():
     
     try:
         if cost_type == 'workplace':
-            # Sprawdź czy miejsce pracy należy do użytkownika
             workplace = Workplace.query.filter_by(
                 id=data['workplace_id'], 
-                owner_id=user_id
+                manager_id=manager_id
             ).first_or_404()
             
             cost = WorkplaceCost(
@@ -85,10 +78,9 @@ def create_cost():
                 date=datetime.fromisoformat(data['date'])
             )
         else:
-            # Sprawdź czy pracownik należy do użytkownika
             employee = Employee.query.filter_by(
                 id=data['employee_id'], 
-                user_id=user_id
+                manager_id=manager_id
             ).first_or_404()
             
             cost = EmployeeCost(
@@ -117,7 +109,7 @@ def create_cost():
 @costs_bp.route('/<string:type>/<uuid:id>', methods=['PUT'])
 @jwt_required()
 def update_cost(type, id):
-    user_id = get_jwt_identity()
+    manager_id = get_jwt_identity()
     data = request.get_json()
     
     try:
@@ -126,7 +118,7 @@ def update_cost(type, id):
                 Workplace, WorkplaceCost.workplace_id == Workplace.id
             ).filter(
                 WorkplaceCost.id == id,
-                Workplace.owner_id == user_id
+                Workplace.manager_id == manager_id
             ).first_or_404()
             
         elif type == 'employee':
@@ -134,7 +126,7 @@ def update_cost(type, id):
                 Employee, EmployeeCost.employee_id == Employee.id
             ).filter(
                 EmployeeCost.id == id,
-                Employee.user_id == user_id
+                Employee.manager_id == manager_id
             ).first_or_404()
         else:
             return jsonify({'error': 'Nieprawidłowy typ kosztu'}), 400
@@ -164,7 +156,7 @@ def update_cost(type, id):
 @costs_bp.route('/<string:type>/<uuid:id>', methods=['DELETE'])
 @jwt_required()
 def delete_cost(type, id):
-    user_id = get_jwt_identity()
+    manager_id = get_jwt_identity()
     
     try:
         if type == 'workplace':
@@ -172,14 +164,14 @@ def delete_cost(type, id):
                 Workplace, WorkplaceCost.workplace_id == Workplace.id
             ).filter(
                 WorkplaceCost.id == id,
-                Workplace.owner_id == user_id
+                Workplace.manager_id == manager_id
             ).first_or_404()
         elif type == 'employee':
             cost = EmployeeCost.query.join(
                 Employee, EmployeeCost.employee_id == Employee.id
             ).filter(
                 EmployeeCost.id == id,
-                Employee.user_id == user_id
+                Employee.manager_id == manager_id
             ).first_or_404()
         else:
             return jsonify({'error': 'Nieprawidłowy typ kosztu'}), 400

@@ -42,16 +42,21 @@ def create_app(config_class=Config):
         
         # Register blueprints
         from .routes.auth import auth_bp
+        from .routes.users import users_bp
         from .routes.employees import employees_bp
         from .routes.workplaces import workplaces_bp
         from .routes.costs import costs_bp
         from .routes.revenues import revenues_bp
         from .routes.schedules import schedules_bp
+        from .routes.reports import reports_bp
+        
         app.register_blueprint(auth_bp, url_prefix='/api/auth')
+        app.register_blueprint(users_bp, url_prefix='/api/users')
         app.register_blueprint(employees_bp, url_prefix='/api/employees')
         app.register_blueprint(workplaces_bp, url_prefix='/api/workplaces')
         app.register_blueprint(costs_bp, url_prefix='/api/costs')
         app.register_blueprint(revenues_bp, url_prefix='/api/revenues')
         app.register_blueprint(schedules_bp, url_prefix='/api/schedules')
+        app.register_blueprint(reports_bp, url_prefix='/api/reports')
     
     return app 

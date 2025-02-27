@@ -15,8 +15,8 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relacje
-    employee = db.relationship('Employee', back_populates='user', uselist=False)
-    workplaces = db.relationship('Workplace', backref='owner', lazy=True)
+    employee = db.relationship('Employee', backref='manager', uselist=False)
+    workplaces = db.relationship('Workplace', backref='manager', lazy=True)
 
     def set_password(self, password):
         self.password_hash = generate_password_hash(password)

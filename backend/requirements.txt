@@ -10,4 +10,5 @@ bcrypt==4.1.2
 email-validator==2.1.0.post1
 alembic==1.13.1
 Werkzeug==3.0.1
-SQLAlchemy==2.0.25 
+SQLAlchemy==2.0.25
+openpyxl==3.1.2 

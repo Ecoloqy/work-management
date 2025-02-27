@@ -5,12 +5,12 @@ from app.models import User
 from app import db
 from app.routes.auth import validate_password
 
-users = Blueprint('users', __name__, url_prefix='/api/users')
+users_bp = Blueprint('users', __name__)
 
-@users.route('/profile', methods=['GET'])
+@users_bp.route('/profile', methods=['GET'])
 @jwt_required()
 def get_profile():
-    current_user_id = int(get_jwt_identity())
+    current_user_id = get_jwt_identity()
     user = User.query.get(current_user_id)
     
     if not user:
@@ -22,7 +22,7 @@ def get_profile():
         'last_name': user.last_name
     })
 
-@users.route('/profile', methods=['PUT'])
+@users_bp.route('/profile', methods=['PUT'])
 @jwt_required()
 def update_profile():
     current_user_id = get_jwt_identity()
@@ -57,11 +57,12 @@ def update_profile():
                 'last_name': user.last_name
             }
         })
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Nie udało się zaktualizować profilu'}), 500
 
-@users.route('/profile/password', methods=['PUT'])
+@users_bp.route('/profile/password', methods=['PUT'])
 @jwt_required()
 def change_password():
     current_user_id = int(get_jwt_identity())
@@ -90,6 +91,7 @@ def change_password():
     try:
         db.session.commit()
         return jsonify({'message': 'Hasło zostało zmienione'})
+
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': 'Nie udało się zmienić hasła'}), 500 

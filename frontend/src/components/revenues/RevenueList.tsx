@@ -35,6 +35,8 @@ import {
   Description as DescriptionIcon,
   AccountBalance as AccountBalanceIcon,
   CalendarToday as CalendarIcon,
+  Person as PersonIcon,
+  MonetizationOn as MonetizationOnIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useFormik } from 'formik';
@@ -53,8 +55,9 @@ interface Employee {
 
 interface Revenue {
   id: string;
-  workplace_id: string;
-  workplace_name: string;
+  type: 'workplace' | 'employee';
+  workplace_id?: string;
+  workplace_name?: string;
   employee_id?: string;
   employee_name?: string;
   description: string;
@@ -64,7 +67,7 @@ interface Revenue {
 }
 
 interface RevenueFormData {
-  type: string;
+  type: 'workplace' | 'employee';
   workplace_id: string;
   employee_id: string;
   description: string;
@@ -74,9 +77,17 @@ interface RevenueFormData {
 
 const validationSchema = yup.object().shape({
   type: yup.string().required('Typ jest wymagany'),
-  workplace_id: yup.string(),
-  employee_id: yup.string(),
-  description: yup.string(),
+  workplace_id: yup.string().when(['type'], {
+    is: (type: string) => type === 'workplace',
+    then: () => yup.string().required('Miejsce pracy jest wymagane'),
+    otherwise: () => yup.string()
+  }),
+  employee_id: yup.string().when(['type'], {
+    is: (type: string) => type === 'employee',
+    then: () => yup.string().required('Pracownik jest wymagany'),
+    otherwise: () => yup.string()
+  }),
+  description: yup.string().required('Opis jest wymagany'),
   amount: yup.string().required('Kwota jest wymagana'),
   date: yup.string().required('Data jest wymagana'),
 });
@@ -135,14 +146,14 @@ export const RevenueList: React.FC = () => {
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (revenue: Revenue) => {
     if (!window.confirm('Czy na pewno chcesz usunąć ten przychód?')) {
       return;
     }
 
     try {
-      await axios.delete(`/api/revenues/${id}`);
-      setRevenues(revenues.filter(revenue => revenue.id !== id));
+      await axios.delete(`/api/revenues/${revenue.type}/${revenue.id}`);
+      setRevenues(revenues.filter(r => r.id !== revenue.id));
       setError(null);
     } catch (err) {
       setError('Nie udało się usunąć przychodu');
@@ -160,32 +171,19 @@ export const RevenueList: React.FC = () => {
       date: new Date().toISOString().split('T')[0],
     },
     validationSchema,
-    validate: (values: RevenueFormData) => {
-      const errors: Partial<RevenueFormData> = {};
-      
-      if (values.type === 'workplace' && !values.workplace_id) {
-        errors.workplace_id = 'Miejsce pracy jest wymagane';
-      }
-      
-      if (values.type === 'employee' && !values.employee_id) {
-        errors.employee_id = 'Pracownik jest wymagany';
-      }
-      
-      return errors;
-    },
-    onSubmit: async (values: RevenueFormData) => {
+    onSubmit: async (values) => {
       try {
         const payload = {
           type: values.type,
-          workplace_id: values.type === 'workplace' ? values.workplace_id : null,
-          employee_id: values.type === 'employee' ? values.employee_id : null,
+          workplace_id: values.type === 'workplace' ? values.workplace_id : undefined,
+          employee_id: values.employee_id || undefined,
           description: values.description,
           amount: parseFloat(values.amount),
           date: values.date,
         };
 
         if (editingRevenue) {
-          await axios.put(`/api/revenues/${editingRevenue.id}`, payload);
+          await axios.put(`/api/revenues/${editingRevenue.type}/${editingRevenue.id}`, payload);
         } else {
           await axios.post('/api/revenues', payload);
         }
@@ -205,7 +203,7 @@ export const RevenueList: React.FC = () => {
     date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
     formik.setValues({
       type: revenue.employee_id ? 'employee' : 'workplace',
-      workplace_id: revenue.workplace_id.toString(),
+      workplace_id: revenue.workplace_id?.toString() || '',
       employee_id: revenue.employee_id?.toString() || '',
       description: revenue.description,
       amount: revenue.amount.toString(),
@@ -225,48 +223,48 @@ export const RevenueList: React.FC = () => {
       {revenues.map((revenue) => (
         <Grid item xs={12} key={revenue.id}>
           <Card>
-            <CardContent key={`revenue-content-${revenue.id}`}>
+            <CardContent>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                 <Typography variant="h6">
-                  {revenue.workplace_name}
+                  {revenue.type === 'workplace' ? revenue.workplace_name : 'Przychód bezpośredni'}
                 </Typography>
                 <Box>
                   <IconButton onClick={() => handleEdit(revenue)} size="small">
                     <EditIcon />
                   </IconButton>
-                  <IconButton onClick={() => handleDelete(revenue.id)} color="error" size="small">
+                  <IconButton onClick={() => handleDelete(revenue)} color="error" size="small">
                     <DeleteIcon />
                   </IconButton>
                 </Box>
               </Box>
               
+              {revenue.employee_name && (
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                  <PersonIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                  <Typography variant="body2">{revenue.employee_name}</Typography>
+                </Box>
+              )}
+              
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <DescriptionIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
                 <Typography variant="body2">{revenue.description}</Typography>
               </Box>
-
+              
               <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                <CalendarIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                <Typography variant="body2">{new Date(revenue.date).toLocaleDateString('pl-PL')}</Typography>
+                <MonetizationOnIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                <Typography variant="body2">{revenue.amount.toFixed(2)} zł</Typography>
               </Box>
               
-              <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
-                <AccountBalanceIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
-                <Typography variant="body2" color="success.main">
-                  {revenue.amount.toFixed(2)} zł
+              <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                <CalendarIcon sx={{ mr: 1, fontSize: 20, color: 'text.secondary' }} />
+                <Typography variant="body2">
+                  {new Date(revenue.date).toLocaleDateString('pl-PL')}
                 </Typography>
               </Box>
             </CardContent>
           </Card>
         </Grid>
       ))}
-      {revenues.length === 0 && (
-        <Grid item xs={12}>
-          <Typography variant="body1" textAlign="center">
-            Brak przychodów
-          </Typography>
-        </Grid>
-      )}
     </Grid>
   );
 
@@ -275,7 +273,7 @@ export const RevenueList: React.FC = () => {
       <Table>
         <TableHead>
           <TableRow>
-            <TableCell>Przychód</TableCell>
+            <TableCell>Typ</TableCell>
             <TableCell>Opis</TableCell>
             <TableCell>Data</TableCell>
             <TableCell align="right">Kwota</TableCell>
@@ -285,10 +283,10 @@ export const RevenueList: React.FC = () => {
         <TableBody>
           {revenues.map((revenue) => (
             <TableRow key={revenue.id}>
-              <TableCell>{revenue.workplace_name ?? revenue.employee_name}</TableCell>
+              <TableCell>{revenue.type === 'workplace' ? revenue.workplace_name : revenue.employee_name}</TableCell>
               <TableCell>{revenue.description}</TableCell>
               <TableCell>{new Date(revenue.date).toLocaleDateString('pl-PL')}</TableCell>
-              <TableCell align="right" sx={{ color: 'success.main' }}>{revenue.amount.toFixed(2)}</TableCell>
+              <TableCell align="right" sx={{ color: 'primary.main' }}>{revenue.amount.toFixed(2)}</TableCell>
               <TableCell align="right">
                 <Tooltip title="Edytuj">
                   <IconButton onClick={() => handleEdit(revenue)}>
@@ -296,7 +294,7 @@ export const RevenueList: React.FC = () => {
                   </IconButton>
                 </Tooltip>
                 <Tooltip title="Usuń">
-                  <IconButton onClick={() => handleDelete(revenue.id)} color="error">
+                  <IconButton onClick={() => handleDelete(revenue)} color="error">
                     <DeleteIcon />
                   </IconButton>
                 </Tooltip>
@@ -306,7 +304,7 @@ export const RevenueList: React.FC = () => {
           {revenues.length === 0 && (
             <TableRow>
               <TableCell colSpan={5} align="center">
-                Brak przychodów
+                Brak kosztów
               </TableCell>
             </TableRow>
           )}
@@ -330,7 +328,10 @@ export const RevenueList: React.FC = () => {
         <Button
           variant="contained"
           startIcon={<AddIcon />}
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => {
+            setEditingRevenue(null);
+            setIsModalOpen(true);
+          }}
         >
           Dodaj
         </Button>
@@ -345,14 +346,12 @@ export const RevenueList: React.FC = () => {
           </DialogTitle>
           <DialogContent>
             <FormControl fullWidth margin="normal">
-              <InputLabel id="type-label">Typ przychodu</InputLabel>
+              <InputLabel>Typ przychodu</InputLabel>
               <Select
-                labelId="type-label"
                 name="type"
                 value={formik.values.type}
                 onChange={formik.handleChange}
                 error={formik.touched.type && Boolean(formik.errors.type)}
-                label="Typ przychodu"
               >
                 <MenuItem value="workplace">Miejsce pracy</MenuItem>
                 <MenuItem value="employee">Pracownik</MenuItem>
@@ -364,16 +363,14 @@ export const RevenueList: React.FC = () => {
 
             {formik.values.type === 'workplace' && (
               <FormControl fullWidth margin="normal">
-                <InputLabel id="workplace-label">Miejsce pracy</InputLabel>
+                <InputLabel>Miejsce pracy</InputLabel>
                 <Select
-                  labelId="workplace-label"
                   name="workplace_id"
                   value={formik.values.workplace_id}
                   onChange={formik.handleChange}
                   error={formik.touched.workplace_id && Boolean(formik.errors.workplace_id)}
-                  label="Miejsce pracy"
                 >
-                  {workplaces.map((workplace) => (
+                  {workplaces.map(workplace => (
                     <MenuItem key={workplace.id} value={workplace.id}>
                       {workplace.name}
                     </MenuItem>
@@ -387,16 +384,14 @@ export const RevenueList: React.FC = () => {
 
             {formik.values.type === 'employee' && (
               <FormControl fullWidth margin="normal">
-                <InputLabel id="employee-label">Pracownik</InputLabel>
+                <InputLabel>Pracownik</InputLabel>
                 <Select
-                  labelId="employee-label"
                   name="employee_id"
                   value={formik.values.employee_id}
                   onChange={formik.handleChange}
                   error={formik.touched.employee_id && Boolean(formik.errors.employee_id)}
-                  label="Pracownik"
                 >
-                  {employees.map((employee) => (
+                  {employees.map(employee => (
                     <MenuItem key={employee.id} value={employee.id}>
                       {employee.firstName} {employee.lastName}
                     </MenuItem>
@@ -413,8 +408,6 @@ export const RevenueList: React.FC = () => {
               margin="normal"
               label="Opis"
               name="description"
-              multiline
-              rows={2}
               value={formik.values.description}
               onChange={formik.handleChange}
               error={formik.touched.description && Boolean(formik.errors.description)}
@@ -458,4 +451,4 @@ export const RevenueList: React.FC = () => {
       </Dialog>
     </Box>
   );
-}; 
+};

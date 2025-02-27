@@ -10,13 +10,9 @@ schedules_bp = Blueprint('schedules', __name__)
 @schedules_bp.route('', methods=['GET'])
 @jwt_required()
 def get_schedules():
-    user_id = get_jwt_identity()
+    manager_id = get_jwt_identity()
     
-    # Pobierz wszystkie grafiki dla miejsc pracy użytkownika
-    schedules = Schedule.query\
-        .join(Workplace)\
-        .filter(Workplace.owner_id == user_id)\
-        .all()
+    schedules = Schedule.query.join(Workplace).filter(Workplace.manager_id == manager_id).all()
     
     result = []
     for schedule in schedules:
@@ -36,14 +32,14 @@ def get_schedules():
 @schedules_bp.route('', methods=['POST'])
 @jwt_required()
 def create_schedule():
-    user_id = get_jwt_identity()
+    manager_id = get_jwt_identity()
     data = request.get_json()
 
     try:
         # Sprawdź czy miejsce pracy należy do użytkownika
         workplace = Workplace.query.filter_by(
             id=data['workplace_id'],
-            owner_id=user_id
+            manager_id=manager_id
         ).first_or_404()
 
         # Sprawdź czy pracownik istnieje
@@ -98,18 +94,18 @@ def create_schedule():
 @schedules_bp.route('/<uuid:id>', methods=['PUT'])
 @jwt_required()
 def update_schedule(id):
-    user_id = get_jwt_identity()
+    manager_id = get_jwt_identity()
     data = request.get_json()
 
     # Sprawdź czy grafik istnieje i należy do użytkownika
     schedule = Schedule.query.join(Workplace).filter(
         Schedule.id == id,
-        Workplace.owner_id == user_id
+        Workplace.manager_id == manager_id
     ).first_or_404()
 
     try:
         # Sprawdź czy pracownik i miejsce pracy istnieją
-        workplace = Workplace.query.filter_by(id=data['workplace_id'], owner_id=user_id).first_or_404()
+        workplace = Workplace.query.filter_by(id=data['workplace_id'], manager_id=manager_id).first_or_404()
         employee = Employee.query.filter_by(id=data['employee_id']).first_or_404()
 
         # Walidacja danych
@@ -162,7 +158,7 @@ def update_schedule(id):
 @schedules_bp.route('/<uuid:id>', methods=['DELETE'])
 @jwt_required()
 def delete_schedule(id):
-    user_id = get_jwt_identity()
+    manager_id = get_jwt_identity()
     
     try:
         # Pobierz grafik i sprawdź uprawnienia
@@ -170,7 +166,7 @@ def delete_schedule(id):
             Workplace, Schedule.workplace_id == Workplace.id
         ).filter(
             Schedule.id == id,
-            Workplace.owner_id == user_id
+            Workplace.manager_id == manager_id
         ).first_or_404()
         
         db.session.delete(schedule)
@@ -180,4 +176,4 @@ def delete_schedule(id):
         
     except Exception as e:
         db.session.rollback()
-        return jsonify({'error': str(e)}), 400 
+        return jsonify({'error': str(e)}), 400

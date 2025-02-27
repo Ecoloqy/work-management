@@ -30,6 +30,8 @@ import {
   Phone as PhoneIcon,
   Email as EmailIcon,
   AccountBalance as AccountBalanceIcon,
+  MonetizationOn as MonetizationOnIcon,
+  MoneyOff as MoneyOffIcon,
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useFormik } from 'formik';
@@ -45,6 +47,24 @@ interface EmployeeResponse {
   monthly_revenues: number;
 }
 
+interface EmployeeRevenue {
+  id: string;
+  employee_id: string;
+  description: string;
+  amount: number;
+  date: string;
+  created_at: string;
+}
+
+interface EmployeeCost {
+  id: string;
+  employee_id: string;
+  description: string;
+  amount: number;
+  date: string;
+  created_at: string;
+}
+
 interface Employee {
   id: string;
   firstName: string;
@@ -53,6 +73,8 @@ interface Employee {
   phone: string;
   monthly_costs: number;
   monthly_revenues: number;
+  revenues?: EmployeeRevenue[];
+  costs?: EmployeeCost[];
 }
 
 interface EmployeeFormData {
@@ -77,6 +99,9 @@ export const EmployeeList: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [showRevenuesDialog, setShowRevenuesDialog] = useState(false);
+  const [showCostsDialog, setShowCostsDialog] = useState(false);
 
   useEffect(() => {
     fetchEmployees();
@@ -104,6 +129,26 @@ export const EmployeeList: React.FC = () => {
     }
   };
 
+  const fetchEmployeeRevenues = async (id: string) => {
+    try {
+      const response = await axios.get(`/api/employees/${id}/revenues`);
+      return response.data;
+    } catch (error) {
+      console.error('Błąd podczas pobierania przychodów pracownika:', error);
+      return [];
+    }
+  };
+
+  const fetchEmployeeCosts = async (id: string) => {
+    try {
+      const response = await axios.get(`/api/employees/${id}/costs`);
+      return response.data;
+    } catch (error) {
+      console.error('Błąd podczas pobierania kosztów pracownika:', error);
+      return [];
+    }
+  };
+  
   const handleDelete = async (id: string) => {
     if (!window.confirm('Czy na pewno chcesz usunąć tego pracownika?')) {
       return;
@@ -190,7 +235,19 @@ export const EmployeeList: React.FC = () => {
         console.error('Error saving employee:', err);
       }
     },
-  });
+    });
+
+  const handleShowRevenues = async (employee: Employee) => {
+    const revenues = await fetchEmployeeRevenues(employee.id);
+    setSelectedEmployee({ ...employee, revenues });
+    setShowRevenuesDialog(true);
+  };
+
+  const handleShowCosts = async (employee: Employee) => {
+    const costs = await fetchEmployeeCosts(employee.id);
+    setSelectedEmployee({ ...employee, costs });
+    setShowCostsDialog(true);
+  };
 
   const renderMobileView = () => (
     <Grid container spacing={2}>
@@ -208,6 +265,12 @@ export const EmployeeList: React.FC = () => {
                   </IconButton>
                   <IconButton onClick={() => handleDelete(employee.id)} color="error" size="small">
                     <DeleteIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleShowCosts(employee)} color="error" size="small">
+                    <MoneyOffIcon />
+                  </IconButton>
+                  <IconButton onClick={() => handleShowRevenues(employee)} color="primary" size="small">
+                    <MonetizationOnIcon />
                   </IconButton>
                 </Box>
               </Box>
@@ -268,8 +331,8 @@ export const EmployeeList: React.FC = () => {
               </TableCell>
               <TableCell>{employee.email}</TableCell>
               <TableCell>{employee.phone}</TableCell>
-              <TableCell align="right">{employee.monthly_costs.toFixed(2)}</TableCell>
-              <TableCell align="right">{employee.monthly_revenues.toFixed(2)}</TableCell>
+              <TableCell align="right" sx={{ color: 'error.main' }}>{employee.monthly_costs.toFixed(2)}</TableCell>
+              <TableCell align="right" sx={{ color: 'primary.main' }}>{employee.monthly_revenues.toFixed(2)}</TableCell>
               <TableCell align="right">
                 <Tooltip title="Edytuj">
                   <IconButton onClick={() => handleEdit(employee)}>
@@ -279,6 +342,16 @@ export const EmployeeList: React.FC = () => {
                 <Tooltip title="Usuń">
                   <IconButton onClick={() => handleDelete(employee.id)} color="error">
                     <DeleteIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Pokaż koszty">
+                  <IconButton onClick={() => handleShowCosts(employee)} color="error">
+                    <MoneyOffIcon />
+                  </IconButton>
+                </Tooltip>
+                <Tooltip title="Pokaż przychody">
+                  <IconButton onClick={() => handleShowRevenues(employee)} color="primary">
+                    <MonetizationOnIcon />
                   </IconButton>
                 </Tooltip>
               </TableCell>
@@ -374,6 +447,92 @@ export const EmployeeList: React.FC = () => {
           </DialogActions>
         </form>
       </Dialog>
+
+      <Dialog
+        open={showRevenuesDialog}
+        onClose={() => setShowRevenuesDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Przychody pracownika: {selectedEmployee?.firstName} {selectedEmployee?.lastName}
+        </DialogTitle>
+        <DialogContent>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Data</TableCell>
+                  <TableCell>Opis</TableCell>
+                  <TableCell align="right">Kwota</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedEmployee?.revenues?.map((revenue) => (
+                  <TableRow key={revenue.id}>
+                    <TableCell>{new Date(revenue.date).toLocaleDateString('pl-PL')}</TableCell>
+                    <TableCell>{revenue.description}</TableCell>
+                    <TableCell align="right">{revenue.amount.toFixed(2)} zł</TableCell>
+                  </TableRow>
+                ))}
+                {(!selectedEmployee?.revenues || selectedEmployee.revenues.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={3} align="center">
+                      Brak przychodów
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowRevenuesDialog(false)}>Zamknij</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={showCostsDialog}
+        onClose={() => setShowCostsDialog(false)}
+        maxWidth="md"
+        fullWidth
+      >
+        <DialogTitle>
+          Koszty pracownika: {selectedEmployee?.firstName} {selectedEmployee?.lastName}
+        </DialogTitle>
+        <DialogContent>
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Data</TableCell>
+                  <TableCell>Opis</TableCell>
+                  <TableCell align="right">Kwota</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {selectedEmployee?.costs?.map((cost) => (
+                  <TableRow key={cost.id}>
+                    <TableCell>{new Date(cost.date).toLocaleDateString('pl-PL')}</TableCell>
+                    <TableCell>{cost.description}</TableCell>
+                    <TableCell align="right">{cost.amount.toFixed(2)} zł</TableCell>
+                  </TableRow>
+                ))}
+                {(!selectedEmployee?.costs || selectedEmployee.costs.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={3} align="center">
+                      Brak kosztów
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setShowCostsDialog(false)}>Zamknij</Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
-}; 
+};
